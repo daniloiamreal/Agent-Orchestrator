@@ -1,0 +1,19 @@
+# Azure DevOps Pipeline
+# Gerado automaticamente pelo WorkflowAgent
+
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main

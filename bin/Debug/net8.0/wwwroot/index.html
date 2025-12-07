@@ -1,0 +1,208 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Orchestrator - Sistema de Agentes Autônomos</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- SignalR Client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Agent Orchestrator</h1>
+            <p class="subtitle">Sistema de Agentes Autônomos com IA</p>
+            <div class="header-status">
+                <span id="statusIndicator" class="status-badge">🔴 Offline</span>
+                <span id="signalrStatus" class="status-badge">📡 Desconectado</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- Seção de Input -->
+            <section class="input-section">
+                <h2>💬 O que você precisa?</h2>
+                <textarea 
+                    id="promptInput" 
+                    placeholder="Ex: Crie uma poesia sobre programação, ou Crie uma classe Calculator em C#..."
+                    rows="3"
+                ></textarea>
+                <div class="button-group">
+                    <button id="executeBtn" class="btn-primary">
+                        <span class="btn-icon">🚀</span>
+                        Pipeline Simples
+                    </button>
+                    <button id="executeAutonomousBtn" class="btn-autonomous">
+                        <span class="btn-icon">🧠</span>
+                        Agentes Autônomos
+                    </button>
+                    <button id="cancelBtn" class="btn-danger" style="display: none;">
+                        <span class="btn-icon">⏹️</span>
+                        Cancelar
+                    </button>
+                </div>
+            </section>
+
+            <!-- Painel de Agentes -->
+            <section id="agentsPanel" class="agents-panel">
+                <h2>🤖 Agentes <span id="ragDocsCount" class="rag-docs-badge" style="display: none;">📄 0 docs</span></h2>
+                <div class="agents-grid">
+                    <div class="agent-card" data-agent="CodeGeneratorAgent">
+                        <div class="agent-icon">👨‍💻</div>
+                        <div class="agent-name">CodeGenerator</div>
+                        <div class="agent-status">Aguardando</div>
+                        <div class="agent-indicator"></div>
+                    </div>
+                    <div class="agent-card" data-agent="ReviewerAgent">
+                        <div class="agent-icon">🔍</div>
+                        <div class="agent-name">Reviewer</div>
+                        <div class="agent-status">Aguardando</div>
+                        <div class="agent-indicator"></div>
+                    </div>
+                    <div class="agent-card clickable" data-agent="RAGAgent" id="ragAgentCard" onclick="toggleRagPanel()">
+                        <div class="agent-icon">📚</div>
+                        <div class="agent-name">RAG</div>
+                        <div class="agent-status">Aguardando</div>
+                        <div class="agent-indicator"></div>
+                        <div class="agent-badge">📤 Upload</div>
+                    </div>
+                    <div class="agent-card" data-agent="APIIntegrationAgent">
+                        <div class="agent-icon">🌐</div>
+                        <div class="agent-name">API</div>
+                        <div class="agent-status">Aguardando</div>
+                        <div class="agent-indicator"></div>
+                    </div>
+                    <div class="agent-card" data-agent="WorkflowAgent">
+                        <div class="agent-icon">⚙️</div>
+                        <div class="agent-name">Workflow</div>
+                        <div class="agent-status">Aguardando</div>
+                        <div class="agent-indicator"></div>
+                    </div>
+                    <div class="agent-card" data-agent="AnalystAgent">
+                        <div class="agent-icon">📊</div>
+                        <div class="agent-name">Analyst</div>
+                        <div class="agent-status">Aguardando</div>
+                        <div class="agent-indicator"></div>
+                    </div>
+                    <div class="agent-card" data-agent="SupervisorAgent">
+                        <div class="agent-icon">👔</div>
+                        <div class="agent-name">Supervisor</div>
+                        <div class="agent-status">Aguardando</div>
+                        <div class="agent-indicator"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Painel RAG (Upload de Documentos) -->
+            <section id="ragPanel" class="rag-panel" style="display: none;">
+                <div class="rag-header">
+                    <h2>📚 RAG - Upload de Documentos</h2>
+                    <button onclick="toggleRagPanel()" class="btn-close">✕</button>
+                </div>
+                <div class="rag-content">
+                    <p class="rag-description">
+                        Faça upload de documentos para que o agente RAG possa buscar informações neles.
+                        Formatos suportados: <strong>.pdf</strong>, .txt, .md, .json, .csv, .html
+                    </p>
+                    
+                    <!-- Upload de Arquivo -->
+                    <div class="rag-upload-area" id="dropZone">
+                        <div class="upload-icon">📄</div>
+                        <p>Arraste arquivos aqui ou clique para selecionar</p>
+                        <input type="file" id="fileInput" accept=".pdf,.txt,.md,.json,.csv,.html,.xml" multiple hidden>
+                        <button onclick="document.getElementById('fileInput').click()" class="btn-upload">
+                            📤 Selecionar Arquivos
+                        </button>
+                    </div>
+                    
+                    <!-- Upload de Texto -->
+                    <div class="rag-text-upload">
+                        <h4>Ou cole texto diretamente:</h4>
+                        <textarea id="ragTextInput" placeholder="Cole aqui o conteúdo do documento..." rows="4"></textarea>
+                        <div class="rag-text-actions">
+                            <input type="text" id="ragFileName" placeholder="Nome do documento (opcional)">
+                            <button onclick="uploadText()" class="btn-upload-text">📝 Adicionar Texto</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Estatísticas -->
+                    <div class="rag-stats" id="ragStats">
+                        <h4>📊 Documentos Carregados</h4>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-value" id="statChunks">0</span>
+                                <span class="stat-label">Chunks</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="statChars">0</span>
+                                <span class="stat-label">Caracteres</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value" id="statSources">0</span>
+                                <span class="stat-label">Fontes</span>
+                            </div>
+                        </div>
+                        <div id="sourcesList" class="sources-list"></div>
+                        <button onclick="clearRagDocuments()" class="btn-clear-rag">🗑️ Limpar Documentos</button>
+                    </div>
+
+                    <!-- Área de Consulta RAG Exclusiva -->
+                    <div id="ragQuerySection" class="rag-query-section" style="display: none;">
+                        <h4>🔍 Perguntar ao Documento</h4>
+                        <p class="rag-query-hint">Sua pergunta será respondida <strong>exclusivamente</strong> com base nos documentos carregados.</p>
+                        <div class="rag-query-input">
+                            <textarea id="ragQueryInput" placeholder="Digite sua pergunta sobre os documentos..." rows="2"></textarea>
+                            <button id="ragQueryBtn" onclick="executeRagQuery()" class="btn-rag-query">
+                                <span class="btn-icon">📚</span>
+                                Perguntar ao Documento
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção do Plano de Execução -->
+            <section id="planSection" class="plan-section" style="display: none;">
+                <div class="plan-header">
+                    <h2>📋 Plano de Execução</h2>
+                    <span id="planStatus" class="plan-status-badge">Planejando...</span>
+                </div>
+                <div class="plan-progress-container">
+                    <div id="progressBar" class="plan-progress-bar"></div>
+                </div>
+                <div id="planSteps" class="plan-steps"></div>
+            </section>
+
+            <!-- Área de Resposta da IA -->
+            <section id="responseSection" class="response-section" style="display: none;">
+                <div class="response-header">
+                    <h2>✨ Resposta da IA</h2>
+                    <button id="copyResponseBtn" class="btn-copy">📋 Copiar</button>
+                </div>
+                <div id="responseContent" class="response-content"></div>
+            </section>
+
+            <!-- Logs em Tempo Real -->
+            <section class="logs-section">
+                <div class="logs-header">
+                    <h2>📊 Logs em Tempo Real</h2>
+                    <button id="clearBtn" class="btn-secondary">🗑️ Limpar</button>
+                </div>
+                <div id="logsContainer" class="logs-container">
+                    <div class="logs-empty">
+                        <p>👋 Aguardando execução...</p>
+                        <p class="logs-hint">Clique em um dos botões acima para começar</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>🚀 Powered by .NET 8 + Perplexity AI</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
